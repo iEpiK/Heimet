@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/ukesbrev", "schedule": "0 17 * * 0" },
+    { "path": "/api/cron/sletting", "schedule": "30 3 * * *" }
+  ]
+}

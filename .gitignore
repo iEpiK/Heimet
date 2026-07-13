@@ -44,3 +44,5 @@ next-env.d.ts
 !.env.example
 /src/generated/
 /opplastinger/
+/test-results/
+/playwright-report/
