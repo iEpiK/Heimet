@@ -15,6 +15,7 @@ import { Merkelapp } from "@/components/ui/Merkelapp";
 import { Knapp } from "@/components/ui/Knapp";
 import { VennKnapp } from "@/components/profil/VennKnapp";
 import { MeldingKnapp } from "@/components/profil/MeldingKnapp";
+import { RapporterKnapp } from "@/components/rapport/RapporterKnapp";
 
 export default async function ProfilSide({
   params,
@@ -99,6 +100,7 @@ export default async function ProfilSide({
                       <MeldingKnapp brukernavn={bruker.username ?? ""} />
                     )}
                     <VennKnapp andreId={bruker.id} status={status} vennskapId={vennskapId} />
+                    <RapporterKnapp refType="bruker" refId={bruker.id} />
                   </div>
                 )
               )}

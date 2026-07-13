@@ -13,12 +13,10 @@ export const hentSesjon = cache(async () => {
 export const hentBruker = cache(async () => {
   const sesjon = await hentSesjon();
   if (!sesjon) return null;
-  const bruker = await prisma.user.findUnique({
-    where: { id: sesjon.user.id },
-  });
-  // Kontoer under sletting behandles som utlogget
-  if (!bruker || bruker.slettesAt) return null;
-  return bruker;
+  // Kontoer med slettesAt satt er skjult for ALLE andre (feeds, søk, profiler
+  // filtrerer på slettesAt: null), men eieren er fortsatt innlogget så
+  // slettingen kan angres innen fristen.
+  return prisma.user.findUnique({ where: { id: sesjon.user.id } });
 });
 
 export type Bruker = NonNullable<Awaited<ReturnType<typeof hentBruker>>>;

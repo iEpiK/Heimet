@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hentBruker } from "@/lib/session";
 import { erBlokkert } from "@/lib/venner";
 import { publiser } from "@/lib/sse";
+import { innenforGrense, GRENSE_MELDING } from "@/lib/ratelimit";
 
 type Resultat = { ok: true; id?: string } | { feil: string };
 
@@ -78,6 +79,7 @@ export async function startGruppesamtale(
 export async function sendMelding(samtaleId: string, innhold: string): Promise<Resultat> {
   const meg = await hentBruker();
   if (!meg) return { feil: "Du må være innlogget." };
+  if (!innenforGrense(`melding:${meg.id}`, 30, 60_000)) return { feil: GRENSE_MELDING };
 
   const trimmet = innhold.trim();
   if (!trimmet || trimmet.length > 5000) return { feil: "Meldingen må ha 1–5000 tegn." };

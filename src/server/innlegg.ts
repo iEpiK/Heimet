@@ -7,6 +7,7 @@ import { hentBruker } from "@/lib/session";
 import { kanGiFeedback, kanForvalteInnlegg, erGrendMedlem } from "@/lib/authz";
 import { lagreBilde } from "@/lib/lagring";
 import { opprettVarsel } from "@/lib/varsler";
+import { innenforGrense, GRENSE_MELDING } from "@/lib/ratelimit";
 import type { FyrstikkType } from "@/generated/prisma/enums";
 
 type Resultat = { ok: true; id?: string } | { feil: string };
@@ -22,6 +23,7 @@ const innleggSkjema = z.object({
 export async function opprettInnlegg(skjema: FormData): Promise<Resultat> {
   const meg = await hentBruker();
   if (!meg) return { feil: "Du må være innlogget." };
+  if (!innenforGrense(`innlegg:${meg.id}`, 10, 60_000)) return { feil: GRENSE_MELDING };
 
   const parsed = innleggSkjema.safeParse({
     innhold: skjema.get("innhold") ?? "",
@@ -179,6 +181,7 @@ export async function opprettKommentar(
 ): Promise<Resultat> {
   const meg = await hentBruker();
   if (!meg) return { feil: "Du må være innlogget." };
+  if (!innenforGrense(`kommentar:${meg.id}`, 20, 60_000)) return { feil: GRENSE_MELDING };
 
   const parsed = kommentarSkjema.safeParse(verdier);
   if (!parsed.success) return { feil: parsed.error.issues[0].message };

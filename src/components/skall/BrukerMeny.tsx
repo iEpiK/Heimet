@@ -10,10 +10,12 @@ export function BrukerMeny({
   navn,
   brukernavn,
   bilde,
+  erModerator = false,
 }: {
   navn: string;
   brukernavn: string;
   bilde?: string | null;
+  erModerator?: boolean;
 }) {
   const [apen, setApen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -62,6 +64,22 @@ export function BrukerMeny({
           >
             Innstillinger
           </Link>
+          <Link
+            href="/venner"
+            onClick={() => setApen(false)}
+            className="block rounded-lg px-3 py-2 text-sm hover:bg-flate-dyp"
+          >
+            Venner
+          </Link>
+          {erModerator && (
+            <Link
+              href="/admin"
+              onClick={() => setApen(false)}
+              className="block rounded-lg px-3 py-2 text-sm hover:bg-flate-dyp"
+            >
+              🛡️ Moderasjon
+            </Link>
+          )}
           <hr className="my-1 border-kant" />
           <button
             onClick={loggUt}

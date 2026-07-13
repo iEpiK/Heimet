@@ -3,13 +3,16 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { slettInnlegg } from "@/server/innlegg";
+import { RapporterKnapp } from "@/components/rapport/RapporterKnapp";
 
 export function InnleggMeny({
   innleggId,
   erForfatter,
+  kanForvalte,
 }: {
   innleggId: string;
   erForfatter: boolean;
+  kanForvalte: boolean;
 }) {
   const [apen, setApen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -53,12 +56,17 @@ export function InnleggMeny({
               ✏️ Rediger
             </button>
           )}
-          <button
-            onClick={slett}
-            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-negativ hover:bg-flate-dyp cursor-pointer"
-          >
-            🗑️ Slett
-          </button>
+          {!erForfatter && (
+            <RapporterKnapp refType="innlegg" refId={innleggId} somMenypunkt />
+          )}
+          {kanForvalte && (
+            <button
+              onClick={slett}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-negativ hover:bg-flate-dyp cursor-pointer"
+            >
+              🗑️ Slett
+            </button>
+          )}
         </div>
       )}
     </div>

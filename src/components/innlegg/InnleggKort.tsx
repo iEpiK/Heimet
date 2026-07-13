@@ -85,7 +85,11 @@ export function InnleggKort({
             </div>
           </div>
         </div>
-        {kanForvalte && <InnleggMeny innleggId={innlegg.id} erForfatter={innlegg.forfatterId === megId} />}
+        <InnleggMeny
+          innleggId={innlegg.id}
+          erForfatter={innlegg.forfatterId === megId}
+          kanForvalte={kanForvalte}
+        />
       </div>
 
       <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed">{innlegg.innhold}</p>

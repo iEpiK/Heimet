@@ -75,10 +75,20 @@ export default async function AppLayout({
               navn={bruker.name}
               brukernavn={bruker.username ?? ""}
               bilde={bruker.image}
+              erModerator={bruker.rolle !== "BRUKER"}
             />
           </div>
         </div>
       </header>
+      {bruker.slettesAt && (
+        <div className="border-b border-aksent/40 bg-aksent-myk px-4 py-2 text-center text-sm">
+          ⚠️ Kontoen din er skjult og slettes permanent{" "}
+          {bruker.slettesAt.toLocaleDateString("nb-NO", { day: "numeric", month: "long" })}.{" "}
+          <Link href="/innstillinger/personvern" className="font-medium underline">
+            Angre slettingen
+          </Link>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
       <SanntidLytter />
     </div>
