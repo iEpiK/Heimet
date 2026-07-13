@@ -13,6 +13,7 @@ import { Kort } from "@/components/ui/Kort";
 import { Merkelapp } from "@/components/ui/Merkelapp";
 import { Knapp } from "@/components/ui/Knapp";
 import { VennKnapp } from "@/components/profil/VennKnapp";
+import { MeldingKnapp } from "@/components/profil/MeldingKnapp";
 
 export default async function ProfilSide({
   params,
@@ -88,7 +89,14 @@ export default async function ProfilSide({
                   <Knapp variant="sekundar">Rediger profil</Knapp>
                 </Link>
               ) : (
-                status && <VennKnapp andreId={bruker.id} status={status} vennskapId={vennskapId} />
+                status && (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {status !== "blokkert_av_meg" && (
+                      <MeldingKnapp brukernavn={bruker.username ?? ""} />
+                    )}
+                    <VennKnapp andreId={bruker.id} status={status} vennskapId={vennskapId} />
+                  </div>
+                )
               )}
             </div>
           </div>
