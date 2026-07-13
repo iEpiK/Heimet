@@ -5,6 +5,9 @@ import { nb } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { krevBruker } from "@/lib/session";
 import { hentVennskapStatus, hentVennIder, erVenner } from "@/lib/venner";
+import { innleggInclude, synligForWhere, kanGiFeedbackSync } from "@/lib/innlegg";
+import { InnleggKort } from "@/components/innlegg/InnleggKort";
+import { InnleggSkjema } from "@/components/innlegg/InnleggSkjema";
 import { Avatar } from "@/components/ui/Avatar";
 import { Kort } from "@/components/ui/Kort";
 import { Merkelapp } from "@/components/ui/Merkelapp";
@@ -58,6 +61,16 @@ export default async function ProfilSide({
     where: { brukerId: bruker.id },
     orderBy: { tildeltAt: "asc" },
   });
+
+  const innleggene = await prisma.innlegg.findMany({
+    where: {
+      AND: [{ forfatterId: bruker.id, stoveId: null }, await synligForWhere(meg.id)],
+    },
+    include: innleggInclude(meg.id),
+    orderBy: { opprettetAt: "desc" },
+    take: 30,
+  });
+  const mineVenner = new Set(await hentVennIder(meg.id));
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 heim-inn">
@@ -122,7 +135,30 @@ export default async function ProfilSide({
         </Kort>
       )}
 
-      <div id="innlegg" />
+      {erMeg && (
+        <InnleggSkjema
+          standardSynlighet={meg.standardSynlighet}
+          standardFeedback={meg.standardFeedback}
+        />
+      )}
+
+      {innleggene.length > 0 ? (
+        <div className="space-y-4">
+          {innleggene.map((i) => (
+            <InnleggKort
+              key={i.id}
+              innlegg={i}
+              megId={meg.id}
+              megRolle={meg.rolle}
+              kanReagere={kanGiFeedbackSync(i, meg.id, mineVenner)}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="py-4 text-center text-sm text-dus">
+          {erMeg ? "Du har ikke delt noe ennå." : "Ingen innlegg å vise."}
+        </p>
+      )}
     </div>
   );
 }
