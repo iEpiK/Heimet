@@ -7,6 +7,7 @@ import { hentBruker } from "@/lib/session";
 import { lagSlug } from "@/lib/slug";
 import { lagreBilde } from "@/lib/lagring";
 import { opprettVarsel } from "@/lib/varsler";
+import { giDugnadspoeng } from "@/lib/dugnad";
 
 type Resultat = { ok: true; slug?: string } | { feil: string };
 
@@ -65,6 +66,7 @@ export async function opprettGrend(skjema: FormData): Promise<Resultat> {
       medlemmer: { create: { brukerId: meg.id, rolle: "ADMIN" } },
     },
   });
+  await giDugnadspoeng(meg.id, "opprettet_grend", { refType: "grend", refId: grend.id });
 
   revalidatePath("/grender");
   return { ok: true, slug: grend.slug };
@@ -284,6 +286,7 @@ export async function svarPaBal(balId: string, innhold: string): Promise<Resulta
   await prisma.balSvar.create({
     data: { balId, brukerId: meg.id, innhold: trimmet },
   });
+  await giDugnadspoeng(meg.id, "svarte_bal", { refType: "bal", refId: balId });
 
   revalidatePath(`/grender/${bal.grend.slug}`);
   return { ok: true };

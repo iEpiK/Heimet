@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { krevBruker } from "@/lib/session";
 import { hentVennIder } from "@/lib/venner";
 import { innleggInclude, synligForWhere, kanGiFeedbackSync } from "@/lib/innlegg";
+import { hentSesong } from "@/lib/aarshjul";
 import { InnleggKort } from "@/components/innlegg/InnleggKort";
 import { InnleggSkjema } from "@/components/innlegg/InnleggSkjema";
 import { Kort } from "@/components/ui/Kort";
@@ -95,6 +96,20 @@ export default async function TunetSide({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <div className="mx-auto w-full max-w-xl space-y-4">
+        {(() => {
+          const sesong = hentSesong();
+          return (
+            <div className="flex items-center gap-3 rounded-xl border border-kant bg-gradient-to-r from-primar/10 to-transparent px-4 py-3">
+              <span className="text-2xl" aria-hidden>
+                {sesong.emoji}
+              </span>
+              <div>
+                <p className="text-sm font-semibold">{sesong.navn}</p>
+                <p className="text-xs text-dus">{sesong.hilsen}</p>
+              </div>
+            </div>
+          );
+        })()}
         <InnleggSkjema
           standardSynlighet={meg.standardSynlighet}
           standardFeedback={meg.standardFeedback}

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { krevBruker } from "@/lib/session";
 import { hentVennskapStatus, hentVennIder, erVenner } from "@/lib/venner";
 import { innleggInclude, synligForWhere, kanGiFeedbackSync } from "@/lib/innlegg";
+import { hentDugnadssum, MERKE_NAVN } from "@/lib/dugnad";
 import { InnleggKort } from "@/components/innlegg/InnleggKort";
 import { InnleggSkjema } from "@/components/innlegg/InnleggSkjema";
 import { Avatar } from "@/components/ui/Avatar";
@@ -58,10 +59,13 @@ export default async function ProfilSide({
       bruker.bursdagSynlighet === "ALLE" ||
       (bruker.bursdagSynlighet === "VENNER" && (await erVenner(meg.id, bruker.id))));
 
-  const merker = await prisma.merke.findMany({
-    where: { brukerId: bruker.id },
-    orderBy: { tildeltAt: "asc" },
-  });
+  const [merker, dugnadssum] = await Promise.all([
+    prisma.merke.findMany({
+      where: { brukerId: bruker.id },
+      orderBy: { tildeltAt: "asc" },
+    }),
+    hentDugnadssum(bruker.id),
+  ]);
 
   const innleggene = await prisma.innlegg.findMany({
     where: {
@@ -112,12 +116,21 @@ export default async function ProfilSide({
               🏡 Med siden {format(bruker.createdAt, "MMMM yyyy", { locale: nb })}
             </Merkelapp>
             <Merkelapp>🤝 {vennIder.length} venner</Merkelapp>
+            {dugnadssum > 0 && (
+              <Merkelapp title="Dugnadspoeng — for bidrag til fellesskapet">
+                🔨 {dugnadssum} dugnadspoeng
+              </Merkelapp>
+            )}
           </div>
           {merker.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {merker.map((m) => (
-                <Merkelapp key={m.id} className="border-gull/50 text-gull">
-                  🏅 {m.type}
+                <Merkelapp
+                  key={m.id}
+                  className="border-gull/50 text-gull"
+                  title={MERKE_NAVN[m.type]?.forklaring}
+                >
+                  🏅 {MERKE_NAVN[m.type]?.navn ?? m.type}
                 </Merkelapp>
               ))}
             </div>

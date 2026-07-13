@@ -8,6 +8,7 @@ import { erGrendMedlem } from "@/lib/authz";
 import { kanSeStevne } from "@/lib/stevner";
 import { lagreBilde } from "@/lib/lagring";
 import { opprettVarsel } from "@/lib/varsler";
+import { giDugnadspoeng } from "@/lib/dugnad";
 import type { StevneSvarType } from "@/generated/prisma/enums";
 
 type Resultat = { ok: true; id?: string } | { feil: string };
@@ -86,6 +87,7 @@ export async function opprettStevne(skjema: FormData): Promise<Resultat> {
       svar: { create: { brukerId: meg.id, svar: "KOMMER" } },
     },
   });
+  await giDugnadspoeng(meg.id, "arrangerte_stevne", { refType: "stevne", refId: stevne.id });
 
   revalidatePath("/stevner");
   return { ok: true, id: stevne.id };
@@ -122,6 +124,7 @@ export async function svarPaStevne(stevneId: string, svar: StevneSvarType): Prom
   });
 
   if (!eksisterende && svar === "KOMMER") {
+    await giDugnadspoeng(meg.id, "kom_pa_stevne", { refType: "stevne", refId: stevneId });
     await opprettVarsel({
       mottakerId: stevne.arrangorId,
       aktorId: meg.id,
