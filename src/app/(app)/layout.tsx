@@ -1,8 +1,31 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 import { krevBruker } from "@/lib/session";
 import { Navigasjon } from "@/components/skall/Navigasjon";
 import { TemaVeksler } from "@/components/skall/TemaVeksler";
 import { BrukerMeny } from "@/components/skall/BrukerMeny";
+import { SanntidLytter } from "@/components/skall/SanntidLytter";
+
+async function antallUlesteSamtaler(brukerId: string) {
+  const medlemskap = await prisma.samtaleMedlem.findMany({
+    where: { brukerId },
+    select: { samtaleId: true, sistLest: true },
+  });
+  if (medlemskap.length === 0) return 0;
+  const teller = await Promise.all(
+    medlemskap.map((m) =>
+      prisma.melding.count({
+        where: {
+          samtaleId: m.samtaleId,
+          avsenderId: { not: brukerId },
+          ...(m.sistLest && { opprettetAt: { gt: m.sistLest } }),
+        },
+        take: 1,
+      })
+    )
+  );
+  return teller.filter((t) => t > 0).length;
+}
 
 export default async function AppLayout({
   children,
@@ -10,6 +33,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const bruker = await krevBruker();
+  const [ulesteVarsler, ulesteSamtaler] = await Promise.all([
+    prisma.varsel.count({ where: { mottakerId: bruker.id, lest: false } }),
+    antallUlesteSamtaler(bruker.id),
+  ]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -22,7 +49,7 @@ export default async function AppLayout({
           >
             🏔️ <span className="hidden sm:inline">Heimet</span>
           </Link>
-          <Navigasjon />
+          <Navigasjon ulesteSamtaler={ulesteSamtaler} />
           <div className="flex items-center gap-1">
             <Link
               href="/sok"
@@ -34,9 +61,14 @@ export default async function AppLayout({
             <Link
               href="/varsler"
               title="Varsler"
-              className="rounded-lg p-2 text-lg hover:bg-flate-dyp transition-colors"
+              className="relative rounded-lg p-2 text-lg hover:bg-flate-dyp transition-colors"
             >
               🔔
+              {ulesteVarsler > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-aksent px-1 text-[10px] font-bold text-white">
+                  {ulesteVarsler > 9 ? "9+" : ulesteVarsler}
+                </span>
+              )}
             </Link>
             <TemaVeksler />
             <BrukerMeny
@@ -48,6 +80,7 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+      <SanntidLytter />
     </div>
   );
 }

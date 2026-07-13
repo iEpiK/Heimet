@@ -6,9 +6,14 @@ import { passkey } from "@better-auth/passkey";
 import { prisma } from "./prisma";
 import { sendEpost, epostRamme } from "./epost";
 
+// Fungerer også uten BETTER_AUTH_URL (f.eks. Vercel-preview): utled fra VERCEL_URL
+const baseURL =
+  process.env.BETTER_AUTH_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const auth = betterAuth({
   appName: "Heimet",
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
   emailAndPassword: {
@@ -71,10 +76,7 @@ export const auth = betterAuth({
     }),
     twoFactor({ issuer: "Heimet" }),
     passkey({
-      rpID:
-        process.env.NODE_ENV === "production"
-          ? new URL(process.env.BETTER_AUTH_URL!).hostname
-          : "localhost",
+      rpID: new URL(baseURL).hostname,
       rpName: "Heimet",
     }),
     nextCookies(), // må være siste plugin

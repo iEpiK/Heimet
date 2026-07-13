@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { publiser } from "./sse";
 
 export type VarselType =
   | "venneforesporsel"
@@ -32,4 +33,5 @@ export async function opprettVarsel(opts: {
       tekst: opts.tekst,
     },
   });
+  publiser(opts.mottakerId, { type: "varsel" });
 }

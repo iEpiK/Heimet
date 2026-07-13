@@ -11,7 +11,7 @@ const lenker = [
   { href: "/meldinger", etikett: "Meldinger", emoji: "✉️" },
 ];
 
-export function Navigasjon() {
+export function Navigasjon({ ulesteSamtaler = 0 }: { ulesteSamtaler?: number }) {
   const sti = usePathname();
   return (
     <nav className="flex items-center gap-1">
@@ -21,7 +21,7 @@ export function Navigasjon() {
           <Link
             key={l.href}
             href={l.href}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               aktiv
                 ? "bg-primar/10 text-primar"
                 : "text-dus hover:text-tekst hover:bg-flate-dyp"
@@ -29,6 +29,11 @@ export function Navigasjon() {
           >
             <span aria-hidden>{l.emoji}</span>
             <span className="hidden md:inline">{l.etikett}</span>
+            {l.href === "/meldinger" && ulesteSamtaler > 0 && (
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-aksent px-1 text-[10px] font-bold text-white">
+                {ulesteSamtaler > 9 ? "9+" : ulesteSamtaler}
+              </span>
+            )}
           </Link>
         );
       })}
