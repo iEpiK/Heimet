@@ -1,0 +1,612 @@
+// Heimet — datamodell
+// Norsk domenespråk i modellene; better-auth-styrte modeller beholder engelske feltnavn.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth (styres av better-auth) ────────────────────────────────────────────
+
+model User {
+  id               String    @id
+  name             String
+  email            String    @unique
+  emailVerified    Boolean   @default(false)
+  image            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  username         String?   @unique
+  displayUsername  String?
+  twoFactorEnabled Boolean?  @default(false)
+
+  // Heimet-felter
+  bio              String?   @db.Text
+  coverbilde       String?
+  fodselsdato      DateTime? @db.Date
+  kommune          String?
+  rolle            SystemRolle    @default(BRUKER)
+  standardSynlighet Synlighet     @default(VENNER)
+  standardFeedback  FeedbackPolicy @default(ALLE)
+  bursdagSynlighet  BursdagSynlighet @default(VENNER)
+  ukesbrev         Boolean   @default(false)
+  slettesAt        DateTime? // GDPR: satt ved sletteforespørsel, hard-delete etter 30 dager
+
+  sessions         Session[]
+  accounts         Account[]
+  twofactors       TwoFactor[]
+  passkeys         Passkey[]
+
+  sendteVennskap   Vennskap[] @relation("VennskapFra")
+  mottatteVennskap Vennskap[] @relation("VennskapTil")
+  blokkeringer     Blokkering[] @relation("Blokkerer")
+  blokkertAv       Blokkering[] @relation("Blokkert")
+  innlegg          Innlegg[]
+  kommentarer      Kommentar[]
+  fyrstikker       Fyrstikk[]
+  grendMedlemskap  GrendMedlemskap[]
+  stoveRoller      StoveRolle[]
+  stoveFolginger   StoveFolging[]
+  arrangerteStevner Stevne[]
+  stevneSvar       StevneSvar[]
+  samtaleMedlemskap SamtaleMedlem[]
+  meldinger        Melding[]
+  varsler          Varsel[]  @relation("VarselMottaker")
+  utlosteVarsler   Varsel[]  @relation("VarselAktor")
+  dugnadspoeng     Dugnadspoeng[]
+  merker           Merke[]
+  rapporter        Rapport[] @relation("Rapportor")
+  balsvar          BalSvar[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model TwoFactor {
+  id                      String    @id
+  secret                  String
+  backupCodes             String
+  userId                  String
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
+}
+
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+  aaguid       String?
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum SystemRolle {
+  BRUKER
+  MODERATOR
+  ADMIN
+}
+
+enum Synlighet {
+  OFFENTLIG
+  VENNER
+  GREND
+}
+
+enum FeedbackPolicy {
+  ALLE
+  VENNER
+  INGEN
+}
+
+enum BursdagSynlighet {
+  ALLE
+  VENNER
+  SKJULT
+}
+
+enum FyrstikkType {
+  FYR        // 🔥
+  STORSLATT  // 🏔️
+  KOS        // ❤️
+  DUGNAD     // 🤝
+  HUMRING    // 😄
+}
+
+enum VennskapStatus {
+  VENTER
+  GODTATT
+}
+
+enum GrendType {
+  AAPEN
+  LUKKET
+  SKJULT
+}
+
+enum GrendRolle {
+  MEDLEM
+  MODERATOR
+  ADMIN
+}
+
+enum MedlemskapStatus {
+  VENTER
+  GODKJENT
+}
+
+enum StoveRolleType {
+  REDAKTOR
+  ADMIN
+}
+
+enum StevneSvarType {
+  KOMMER
+  KANSKJE
+  KAN_IKKE
+}
+
+enum RapportStatus {
+  NY
+  UNDER_BEHANDLING
+  LUKKET
+}
+
+// ─── Sosial graf ─────────────────────────────────────────────────────────────
+
+model Vennskap {
+  id          String         @id @default(cuid())
+  fraId       String
+  tilId       String
+  status      VennskapStatus @default(VENTER)
+  opprettetAt DateTime       @default(now())
+  godtattAt   DateTime?
+
+  fra User @relation("VennskapFra", fields: [fraId], references: [id], onDelete: Cascade)
+  til User @relation("VennskapTil", fields: [tilId], references: [id], onDelete: Cascade)
+
+  @@unique([fraId, tilId])
+  @@index([tilId, status])
+  @@index([fraId, status])
+  @@map("vennskap")
+}
+
+model Blokkering {
+  id          String   @id @default(cuid())
+  blokkererId String
+  blokkertId  String
+  opprettetAt DateTime @default(now())
+
+  blokkerer User @relation("Blokkerer", fields: [blokkererId], references: [id], onDelete: Cascade)
+  blokkert  User @relation("Blokkert", fields: [blokkertId], references: [id], onDelete: Cascade)
+
+  @@unique([blokkererId, blokkertId])
+  @@index([blokkertId])
+  @@map("blokkering")
+}
+
+// ─── Innhold ─────────────────────────────────────────────────────────────────
+
+model Innlegg {
+  id             String         @id @default(cuid())
+  forfatterId    String
+  innhold        String         @db.Text
+  synlighet      Synlighet      @default(VENNER)
+  feedbackPolicy FeedbackPolicy @default(ALLE)
+  grendId        String?
+  stoveId        String?
+  opprettetAt    DateTime       @default(now())
+  redigertAt     DateTime?
+
+  forfatter   User        @relation(fields: [forfatterId], references: [id], onDelete: Cascade)
+  grend       Grend?      @relation(fields: [grendId], references: [id], onDelete: Cascade)
+  stove       Stove?      @relation(fields: [stoveId], references: [id], onDelete: Cascade)
+  media       Media[]
+  fyrstikker  Fyrstikk[]
+  kommentarer Kommentar[]
+
+  @@index([forfatterId, opprettetAt(sort: Desc)])
+  @@index([grendId, opprettetAt(sort: Desc)])
+  @@index([stoveId, opprettetAt(sort: Desc)])
+  @@index([opprettetAt(sort: Desc)])
+  @@map("innlegg")
+}
+
+model Media {
+  id        String @id @default(cuid())
+  innleggId String
+  type      String // "bilde"
+  url       String
+  bredde    Int?
+  hoyde     Int?
+
+  innlegg Innlegg @relation(fields: [innleggId], references: [id], onDelete: Cascade)
+
+  @@index([innleggId])
+  @@map("media")
+}
+
+model Fyrstikk {
+  id          String       @id @default(cuid())
+  type        FyrstikkType
+  brukerId    String
+  innleggId   String?
+  kommentarId String?
+  opprettetAt DateTime     @default(now())
+
+  bruker    User       @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+  innlegg   Innlegg?   @relation(fields: [innleggId], references: [id], onDelete: Cascade)
+  kommentar Kommentar? @relation(fields: [kommentarId], references: [id], onDelete: Cascade)
+
+  @@unique([brukerId, innleggId])
+  @@unique([brukerId, kommentarId])
+  @@index([innleggId])
+  @@index([kommentarId])
+  @@map("fyrstikk")
+}
+
+model Kommentar {
+  id          String    @id @default(cuid())
+  innleggId   String
+  forfatterId String
+  innhold     String    @db.Text
+  parentId    String?
+  opprettetAt DateTime  @default(now())
+  redigertAt  DateTime?
+
+  innlegg    Innlegg     @relation(fields: [innleggId], references: [id], onDelete: Cascade)
+  forfatter  User        @relation(fields: [forfatterId], references: [id], onDelete: Cascade)
+  parent     Kommentar?  @relation("KommentarTrad", fields: [parentId], references: [id], onDelete: Cascade)
+  svar       Kommentar[] @relation("KommentarTrad")
+  fyrstikker Fyrstikk[]
+
+  @@index([innleggId, opprettetAt])
+  @@index([parentId])
+  @@map("kommentar")
+}
+
+// ─── Grender (grupper) ───────────────────────────────────────────────────────
+
+model Grend {
+  id          String    @id @default(cuid())
+  navn        String
+  slug        String    @unique
+  beskrivelse String?   @db.Text
+  type        GrendType @default(AAPEN)
+  kommune     String?
+  coverbilde  String?
+  opprettetAt DateTime  @default(now())
+
+  medlemmer GrendMedlemskap[]
+  innlegg   Innlegg[]
+  stevner   Stevne[]
+  bal       UkasBal[]
+
+  @@index([kommune])
+  @@map("grend")
+}
+
+model GrendMedlemskap {
+  id          String           @id @default(cuid())
+  grendId     String
+  brukerId    String
+  rolle       GrendRolle       @default(MEDLEM)
+  status      MedlemskapStatus @default(GODKJENT)
+  opprettetAt DateTime         @default(now())
+
+  grend  Grend @relation(fields: [grendId], references: [id], onDelete: Cascade)
+  bruker User  @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([grendId, brukerId])
+  @@index([brukerId, status])
+  @@map("grend_medlemskap")
+}
+
+// ─── Stover (sider) ──────────────────────────────────────────────────────────
+
+model Stove {
+  id          String   @id @default(cuid())
+  navn        String
+  slug        String   @unique
+  kategori    String
+  beskrivelse String?  @db.Text
+  coverbilde  String?
+  opprettetAt DateTime @default(now())
+
+  roller    StoveRolle[]
+  folgere   StoveFolging[]
+  innlegg   Innlegg[]
+  stevner   Stevne[]
+
+  @@map("stove")
+}
+
+model StoveRolle {
+  id       String         @id @default(cuid())
+  stoveId  String
+  brukerId String
+  rolle    StoveRolleType @default(REDAKTOR)
+
+  stove  Stove @relation(fields: [stoveId], references: [id], onDelete: Cascade)
+  bruker User  @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([stoveId, brukerId])
+  @@index([brukerId])
+  @@map("stove_rolle")
+}
+
+model StoveFolging {
+  id          String   @id @default(cuid())
+  stoveId     String
+  brukerId    String
+  opprettetAt DateTime @default(now())
+
+  stove  Stove @relation(fields: [stoveId], references: [id], onDelete: Cascade)
+  bruker User  @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([stoveId, brukerId])
+  @@index([brukerId])
+  @@map("stove_folging")
+}
+
+// ─── Stevner (arrangementer) ─────────────────────────────────────────────────
+
+model Stevne {
+  id          String    @id @default(cuid())
+  tittel      String
+  beskrivelse String?   @db.Text
+  start       DateTime
+  slutt       DateTime?
+  sted        String?
+  synlighet   Synlighet @default(VENNER)
+  arrangorId  String
+  grendId     String?
+  stoveId     String?
+  coverbilde  String?
+  opprettetAt DateTime  @default(now())
+
+  arrangor User    @relation(fields: [arrangorId], references: [id], onDelete: Cascade)
+  grend    Grend?  @relation(fields: [grendId], references: [id], onDelete: Cascade)
+  stove    Stove?  @relation(fields: [stoveId], references: [id], onDelete: Cascade)
+  svar     StevneSvar[]
+
+  @@index([start])
+  @@index([grendId, start])
+  @@index([arrangorId])
+  @@map("stevne")
+}
+
+model StevneSvar {
+  id       String         @id @default(cuid())
+  stevneId String
+  brukerId String
+  svar     StevneSvarType
+  svartAt  DateTime       @default(now())
+
+  stevne Stevne @relation(fields: [stevneId], references: [id], onDelete: Cascade)
+  bruker User   @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([stevneId, brukerId])
+  @@index([brukerId])
+  @@map("stevne_svar")
+}
+
+// ─── Meldinger ───────────────────────────────────────────────────────────────
+
+model Samtale {
+  id          String   @id @default(cuid())
+  navn        String?  // null for 1:1
+  erGruppe    Boolean  @default(false)
+  opprettetAt DateTime @default(now())
+  sisteAktivitet DateTime @default(now())
+
+  medlemmer SamtaleMedlem[]
+  meldinger Melding[]
+
+  @@index([sisteAktivitet(sort: Desc)])
+  @@map("samtale")
+}
+
+model SamtaleMedlem {
+  id        String    @id @default(cuid())
+  samtaleId String
+  brukerId  String
+  sistLest  DateTime?
+  blittMedAt DateTime @default(now())
+
+  samtale Samtale @relation(fields: [samtaleId], references: [id], onDelete: Cascade)
+  bruker  User    @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([samtaleId, brukerId])
+  @@index([brukerId])
+  @@map("samtale_medlem")
+}
+
+model Melding {
+  id          String   @id @default(cuid())
+  samtaleId   String
+  avsenderId  String
+  innhold     String   @db.Text
+  opprettetAt DateTime @default(now())
+
+  samtale  Samtale @relation(fields: [samtaleId], references: [id], onDelete: Cascade)
+  avsender User    @relation(fields: [avsenderId], references: [id], onDelete: Cascade)
+
+  @@index([samtaleId, opprettetAt(sort: Desc)])
+  @@map("melding")
+}
+
+// ─── Varsler ─────────────────────────────────────────────────────────────────
+
+model Varsel {
+  id          String   @id @default(cuid())
+  mottakerId  String
+  aktorId     String?
+  type        String   // f.eks. "venneforesporsel", "fyrstikk", "kommentar", "stevne_invitasjon", "grend_godkjent", "bursdag"
+  refType     String?  // "innlegg" | "kommentar" | "stevne" | "grend" | "bruker" | ...
+  refId       String?
+  tekst       String?
+  lest        Boolean  @default(false)
+  opprettetAt DateTime @default(now())
+
+  mottaker User  @relation("VarselMottaker", fields: [mottakerId], references: [id], onDelete: Cascade)
+  aktor    User? @relation("VarselAktor", fields: [aktorId], references: [id], onDelete: Cascade)
+
+  @@index([mottakerId, lest, opprettetAt(sort: Desc)])
+  @@map("varsel")
+}
+
+// ─── Dugnad & Årshjulet ──────────────────────────────────────────────────────
+
+model Dugnadspoeng {
+  id          String   @id @default(cuid())
+  brukerId    String
+  handling    String   // "onsket_velkommen", "arrangerte_stevne", "svarte_bal", "hjalp_nabo", ...
+  poeng       Int
+  refType     String?
+  refId       String?
+  opprettetAt DateTime @default(now())
+
+  bruker User @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@index([brukerId, opprettetAt(sort: Desc)])
+  @@map("dugnadspoeng")
+}
+
+model Merke {
+  id        String   @id @default(cuid())
+  brukerId  String
+  type      String   // "ildsjel", "vertskap", "grunnlegger", "baltenner", ...
+  tildeltAt DateTime @default(now())
+
+  bruker User @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@unique([brukerId, type])
+  @@map("merke")
+}
+
+model UkasBal {
+  id        String   @id @default(cuid())
+  grendId   String
+  sporsmal  String
+  uke       Int      // ISO-uke
+  ar        Int
+  opprettetAt DateTime @default(now())
+
+  grend Grend    @relation(fields: [grendId], references: [id], onDelete: Cascade)
+  svar  BalSvar[]
+
+  @@unique([grendId, ar, uke])
+  @@map("ukas_bal")
+}
+
+model BalSvar {
+  id          String   @id @default(cuid())
+  balId       String
+  brukerId    String
+  innhold     String   @db.Text
+  opprettetAt DateTime @default(now())
+
+  bal    UkasBal @relation(fields: [balId], references: [id], onDelete: Cascade)
+  bruker User    @relation(fields: [brukerId], references: [id], onDelete: Cascade)
+
+  @@index([balId, opprettetAt])
+  @@map("bal_svar")
+}
+
+model Arshjul {
+  id        String   @id @default(cuid())
+  navn      String   // "17. mai", "Mørketid", "Påskefjellet", ...
+  emoji     String
+  startDato String   // "MM-DD"
+  sluttDato String   // "MM-DD"
+  tema      String   // CSS-temanøkkel
+  hilsen    String
+}
+
+// ─── Moderasjon ──────────────────────────────────────────────────────────────
+
+model Rapport {
+  id          String        @id @default(cuid())
+  rapportorId String
+  refType     String        // "innlegg" | "kommentar" | "bruker" | "grend" | "stove" | "melding"
+  refId       String
+  arsak       String        @db.Text
+  status      RapportStatus @default(NY)
+  behandletAv String?
+  notat       String?       @db.Text
+  opprettetAt DateTime      @default(now())
+  behandletAt DateTime?
+
+  rapportor User @relation("Rapportor", fields: [rapportorId], references: [id], onDelete: Cascade)
+
+  @@index([status, opprettetAt])
+  @@map("rapport")
+}

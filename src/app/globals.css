@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+  Heimet designsystem.
+  Semantiske fargetokens: komponentene bruker `bg-flate`, `text-dus` osv.,
+  og temaskiftet (dagslys/mørketid) skjer kun her via CSS-variabler.
+*/
+
+:root {
+  /* Dagslys — bjørk, granskog og falurødt */
+  --bakgrunn: #f3eee2;
+  --flate: #fffdf7;
+  --flate-dyp: #ece5d3;
+  --kant: #ddd3bc;
+  --tekst: #2b2620;
+  --dus: #6f6555;
+  --primar: #1f4d33;
+  --primar-hover: #2a6444;
+  --pa-primar: #f5f1e8;
+  --aksent: #9a3b32;
+  --aksent-myk: #f3ddd4;
+  --gull: #b8860b;
+  --positiv: #2a6444;
+  --negativ: #9a3b32;
+  --skygge: 0 1px 3px rgb(43 38 32 / 0.08), 0 4px 16px rgb(43 38 32 / 0.05);
+}
+
+.morketid {
+  /* Mørketid — vinternatt og nordlys */
+  --bakgrunn: #0d131e;
+  --flate: #151d2b;
+  --flate-dyp: #0f1622;
+  --kant: #263349;
+  --tekst: #e8e6df;
+  --dus: #93a0b6;
+  --primar: #4fce89;
+  --primar-hover: #6adf9e;
+  --pa-primar: #0d131e;
+  --aksent: #e07a68;
+  --aksent-myk: #3a2521;
+  --gull: #d4a94e;
+  --positiv: #4fce89;
+  --negativ: #e07a68;
+  --skygge: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+}
+
+@theme inline {
+  --color-bakgrunn: var(--bakgrunn);
+  --color-flate: var(--flate);
+  --color-flate-dyp: var(--flate-dyp);
+  --color-kant: var(--kant);
+  --color-tekst: var(--tekst);
+  --color-dus: var(--dus);
+  --color-primar: var(--primar);
+  --color-primar-hover: var(--primar-hover);
+  --color-pa-primar: var(--pa-primar);
+  --color-aksent: var(--aksent);
+  --color-aksent-myk: var(--aksent-myk);
+  --color-gull: var(--gull);
+  --color-positiv: var(--positiv);
+  --color-negativ: var(--negativ);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --shadow-heim: var(--skygge);
+}
+
+body {
+  background: var(--bakgrunn);
+  color: var(--tekst);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--primar);
+  color: var(--pa-primar);
+}
+
+/* Diskré scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kant) transparent;
+}
+
+@keyframes heim-inn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.heim-inn {
+  animation: heim-inn 0.25s ease-out;
+}
